@@ -3,9 +3,9 @@ name: Build Android APK
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, master ]
   workflow_dispatch:
 
 jobs:
@@ -16,21 +16,36 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
     
+    - name: Debug - Check files
+      run: |
+        echo "Current directory: $(pwd)"
+        echo "--- Files in root ---"
+        ls -la
+        echo "--- Check pubspec.yaml ---"
+        cat pubspec.yaml || echo "pubspec.yaml not found!"
+    
     - name: Setup Java
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
         java-version: '17'
     
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+    
+    - name: Accept Android Licenses
+      run: yes | sdkmanager --licenses || true
+    
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.22.0'
+        flutter-version: '3.24.0'
         channel: 'stable'
         cache: true
     
     - name: Create local.properties
       run: |
+        mkdir -p android
         echo "flutter.sdk=$FLUTTER_ROOT" > android/local.properties
         echo "sdk.dir=$ANDROID_SDK_ROOT" >> android/local.properties
     

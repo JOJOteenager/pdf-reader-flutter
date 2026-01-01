@@ -179,15 +179,33 @@ class _DrawingPainter extends CustomPainter {
     }
 
     if (stroke.points.length == 1) {
-      canvas.drawCircle(stroke.points.first, stroke.width / 2, paint);
+      // 单点绘制为圆点
+      final fillPaint = Paint()
+        ..color = paint.color
+        ..style = PaintingStyle.fill;
+      canvas.drawCircle(stroke.points.first, stroke.width / 2, fillPaint);
       return;
     }
 
+    // 使用二次贝塞尔曲线平滑绘制
     final path = Path();
     path.moveTo(stroke.points.first.dx, stroke.points.first.dy);
     
-    for (int i = 1; i < stroke.points.length; i++) {
-      path.lineTo(stroke.points[i].dx, stroke.points[i].dy);
+    if (stroke.points.length == 2) {
+      // 两点直接连线
+      path.lineTo(stroke.points[1].dx, stroke.points[1].dy);
+    } else {
+      // 使用二次贝塞尔曲线平滑连接
+      for (int i = 1; i < stroke.points.length - 1; i++) {
+        final p0 = stroke.points[i];
+        final p1 = stroke.points[i + 1];
+        final midX = (p0.dx + p1.dx) / 2;
+        final midY = (p0.dy + p1.dy) / 2;
+        path.quadraticBezierTo(p0.dx, p0.dy, midX, midY);
+      }
+      // 连接到最后一个点
+      final lastPoint = stroke.points.last;
+      path.lineTo(lastPoint.dx, lastPoint.dy);
     }
     
     canvas.drawPath(path, paint);
@@ -195,7 +213,13 @@ class _DrawingPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _DrawingPainter oldDelegate) {
-    return oldDelegate.strokes != strokes || 
-           oldDelegate.currentStroke != currentStroke;
+    // 优化重绘判断：只在笔画数量或当前笔画变化时重绘
+    if (oldDelegate.strokes.length != strokes.length) return true;
+    if (oldDelegate.currentStroke != currentStroke) return true;
+    // 检查当前笔画的点数是否变化
+    if (currentStroke != null && oldDelegate.currentStroke != null) {
+      return currentStroke!.points.length != oldDelegate.currentStroke!.points.length;
+    }
+    return false;
   }
 }

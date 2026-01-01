@@ -17,20 +17,32 @@ class _TextActionDialogState extends State<TextActionDialog> {
   String _resultText = '';
   bool _isLoading = false;
   String _currentAction = '';
+  int _translationRequestId = 0;
 
   @override
   void initState() {
     super.initState();
     _resultText = widget.text;
   }
+  
+  @override
+  void dispose() {
+    // 取消待处理的翻译请求
+    _translationRequestId++;
+    super.dispose();
+  }
 
   Future<void> _translate() async {
+    final currentRequestId = ++_translationRequestId;
     setState(() {
       _isLoading = true;
       _currentAction = '翻译中...';
     });
 
     final result = await TranslationService.englishToChinese(widget.text);
+    
+    // 检查是否是最新的请求
+    if (!mounted || currentRequestId != _translationRequestId) return;
     
     setState(() {
       _isLoading = false;

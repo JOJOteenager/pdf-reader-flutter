@@ -35,24 +35,29 @@ class OcrService {
     int width,
     int height,
   ) async {
+    File? tempFile;
     try {
       _initRecognizer();
       
       // 保存临时文件
       final tempDir = Directory.systemTemp;
-      final tempFile = File('${tempDir.path}/ocr_temp_${DateTime.now().millisecondsSinceEpoch}.png');
+      tempFile = File('${tempDir.path}/ocr_temp_${DateTime.now().millisecondsSinceEpoch}.png');
       await tempFile.writeAsBytes(bytes);
       
       final result = await recognizeFromFile(tempFile.path);
       
-      // 清理临时文件
-      if (await tempFile.exists()) {
-        await tempFile.delete();
-      }
-      
       return result;
     } catch (e) {
       return OcrResult(success: false, text: '', errorMessage: '识别失败: $e');
+    } finally {
+      // 确保临时文件被清理
+      if (tempFile != null && await tempFile.exists()) {
+        try {
+          await tempFile.delete();
+        } catch (_) {
+          // 忽略删除失败
+        }
+      }
     }
   }
 
