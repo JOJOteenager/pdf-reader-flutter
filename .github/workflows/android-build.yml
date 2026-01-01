@@ -16,14 +16,6 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
     
-    - name: Debug - Check files
-      run: |
-        echo "Current directory: $(pwd)"
-        echo "--- Files in root ---"
-        ls -la
-        echo "--- Check pubspec.yaml ---"
-        cat pubspec.yaml || echo "pubspec.yaml not found!"
-    
     - name: Setup Java
       uses: actions/setup-java@v4
       with:
@@ -41,13 +33,19 @@ jobs:
       with:
         flutter-version: '3.24.0'
         channel: 'stable'
-        cache: true
+        cache: false
+    
+    - name: Flutter doctor
+      run: flutter doctor -v
     
     - name: Create local.properties
       run: |
         mkdir -p android
         echo "flutter.sdk=$FLUTTER_ROOT" > android/local.properties
         echo "sdk.dir=$ANDROID_SDK_ROOT" >> android/local.properties
+    
+    - name: Clean Flutter
+      run: flutter clean
     
     - name: Get dependencies
       run: flutter pub get
