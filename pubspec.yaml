@@ -29,9 +29,8 @@ dependencies:
   # 网络请求（翻译API）
   http: ^1.2.0
   
-  # OCR 文字识别 (Google ML Kit)
-  google_mlkit_text_recognition: ^0.11.0
-  google_mlkit_text_recognition_chinese: ^0.8.0
+  # OCR 文字识别 (Google ML Kit - 支持中英文)
+  google_mlkit_text_recognition: ^0.13.0
   
   # 截图功能
   screenshot: ^2.1.0

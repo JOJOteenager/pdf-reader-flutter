@@ -1,32 +1,27 @@
 import 'dart:io';
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
-import 'package:google_mlkit_text_recognition_chinese/google_mlkit_text_recognition_chinese.dart';
 
 /// OCR 文字识别服务
 class OcrService {
-  static TextRecognizer? _latinRecognizer;
-  static TextRecognizer? _chineseRecognizer;
+  static TextRecognizer? _recognizer;
 
-  /// 初始化识别器
-  static void _initRecognizers() {
-    _latinRecognizer ??= TextRecognizer(script: TextRecognitionScript.latin);
-    _chineseRecognizer ??= TextRecognizer(script: TextRecognitionScript.chinese);
+  /// 初始化识别器（支持中英文）
+  static void _initRecognizer() {
+    // 使用中文脚本识别器，同时也能识别英文
+    _recognizer ??= TextRecognizer(script: TextRecognitionScript.chinese);
   }
 
   /// 释放资源
   static Future<void> dispose() async {
-    await _latinRecognizer?.close();
-    await _chineseRecognizer?.close();
-    _latinRecognizer = null;
-    _chineseRecognizer = null;
+    await _recognizer?.close();
+    _recognizer = null;
   }
 
   /// 从图片文件识别文字
   static Future<OcrResult> recognizeFromFile(String imagePath) async {
     try {
-      _initRecognizers();
+      _initRecognizer();
       final inputImage = InputImage.fromFilePath(imagePath);
       return await _recognizeImage(inputImage);
     } catch (e) {
@@ -41,7 +36,7 @@ class OcrService {
     int height,
   ) async {
     try {
-      _initRecognizers();
+      _initRecognizer();
       
       // 保存临时文件
       final tempDir = Directory.systemTemp;
@@ -64,28 +59,13 @@ class OcrService {
   /// 识别图片
   static Future<OcrResult> _recognizeImage(InputImage inputImage) async {
     try {
-      // 先尝试中文识别
-      final chineseResult = await _chineseRecognizer!.processImage(inputImage);
+      final result = await _recognizer!.processImage(inputImage);
       
-      if (chineseResult.text.isNotEmpty) {
+      if (result.text.isNotEmpty) {
         return OcrResult(
           success: true,
-          text: chineseResult.text,
-          blocks: chineseResult.blocks.map((b) => TextBlockInfo(
-            text: b.text,
-            boundingBox: b.boundingBox,
-          )).toList(),
-        );
-      }
-
-      // 如果中文识别为空，尝试拉丁文识别
-      final latinResult = await _latinRecognizer!.processImage(inputImage);
-      
-      if (latinResult.text.isNotEmpty) {
-        return OcrResult(
-          success: true,
-          text: latinResult.text,
-          blocks: latinResult.blocks.map((b) => TextBlockInfo(
+          text: result.text,
+          blocks: result.blocks.map((b) => TextBlockInfo(
             text: b.text,
             boundingBox: b.boundingBox,
           )).toList(),
