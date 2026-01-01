@@ -4,10 +4,22 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M54,30 L74,50 L54,70 L34,50 Z"/>
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M44,45 L64,45 L64,65 L44,65 Z"/>
+    <!-- 文档主体 - 居中显示 -->
+    <group android:translateX="18" android:translateY="18">
+        <!-- 文档背景 -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M12,0h42l18,18v54h-60z"/>
+        <!-- 折角 -->
+        <path
+            android:fillColor="#C8E6C9"
+            android:pathData="M54,0v18h18z"/>
+        <!-- PDF 文字 -->
+        <path
+            android:fillColor="#1B5E20"
+            android:pathData="M16,28h10c5,0 9,4 9,9s-4,9 -9,9h-5v12h-5z M21,33v8h5c3,0 4,-2 4,-4s-1,-4 -4,-4z"/>
+        <path
+            android:fillColor="#1B5E20"
+            android:pathData="M40,28h8c8,0 13,6 13,14s-5,14 -13,14h-8z M45,33v18h3c5,0 8,-4 8,-9s-3,-9 -8,-9z"/>
+    </group>
 </vector>

@@ -1,8 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state.dart';
 import 'pdf_viewer_screen.dart';
+import 'settings_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -12,27 +14,39 @@ class HomeScreen extends StatelessWidget {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf'],
+        allowMultiple: false,
       );
 
       if (result != null && result.files.single.path != null) {
         final path = result.files.single.path!;
         if (context.mounted) {
-          context.read<AppState>().setCurrentPdf(path);
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => PdfViewerScreen(filePath: path),
-            ),
-          );
+          _navigateToPdfViewer(context, path);
         }
       }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('打开文件失败: $e')),
+          SnackBar(
+            content: Text('打开文件失败: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
+  }
+
+  void _navigateToPdfViewer(BuildContext context, String path) {
+    context.read<AppState>().setCurrentPdf(path);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PdfViewerScreen(filePath: path),
+      ),
+    );
+  }
+
+  String _getFileName(String path) {
+    return path.split(Platform.pathSeparator).last;
   }
 
   @override
@@ -43,8 +57,12 @@ class HomeScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
+            tooltip: '设置',
             onPressed: () {
-              // TODO: 设置页面
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+              );
             },
           ),
         ],
@@ -58,125 +76,256 @@ class HomeScreen extends StatelessWidget {
           ),
         ),
         child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              children: [
-                const SizedBox(height: 40),
-                // Logo/Icon
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.picture_as_pdf,
-                    size: 80,
-                    color: Colors.white,
-                  ),
+          child: Column(
+            children: [
+              // 顶部区域 - Logo和标题
+              Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 20),
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.picture_as_pdf,
+                        size: 64,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'PDF阅读器',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '专为华为平板优化',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.white.withOpacity(0.8),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 24),
-                // Title
-                const Text(
-                  'PDF阅读器',
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+              ),
+              
+              // 功能列表
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Wrap(
+                  spacing: 16,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.center,
+                  children: const [
+                    _FeatureChip(icon: Icons.picture_as_pdf, text: 'PDF阅读'),
+                    _FeatureChip(icon: Icons.edit, text: '注释'),
+                    _FeatureChip(icon: Icons.zoom_in, text: '缩放'),
+                    _FeatureChip(icon: Icons.bookmark, text: '书签'),
+                    _FeatureChip(icon: Icons.search, text: '搜索'),
+                  ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  '版本 1.0.0',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.white.withOpacity(0.8),
-                  ),
-                ),
-                const SizedBox(height: 48),
-                // Features
-                Expanded(
-                  child: ListView(
-                    children: const [
-                      _FeatureItem(
-                        icon: Icons.picture_as_pdf,
-                        text: 'PDF文档阅读',
-                      ),
-                      _FeatureItem(
-                        icon: Icons.edit,
-                        text: '手写笔注释',
-                      ),
-                      _FeatureItem(
-                        icon: Icons.pan_tool,
-                        text: '智能防误触',
-                      ),
-                      _FeatureItem(
-                        icon: Icons.zoom_in,
-                        text: '放大镜工具',
-                      ),
-                      _FeatureItem(
-                        icon: Icons.translate,
-                        text: '翻译功能',
-                      ),
-                      _FeatureItem(
-                        icon: Icons.text_fields,
-                        text: '繁简转换',
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-                // Open Button
-                SizedBox(
+              ),
+              
+              const SizedBox(height: 24),
+              
+              // 打开文件按钮
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: SizedBox(
                   width: double.infinity,
                   height: 56,
                   child: ElevatedButton.icon(
                     onPressed: () => _openPdfFile(context),
-                    icon: const Icon(Icons.folder_open),
+                    icon: const Icon(Icons.folder_open, size: 24),
                     label: const Text(
                       '打开PDF文件',
-                      style: TextStyle(fontSize: 18),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: const Color(0xFF1B5E20),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
-              ],
-            ),
+              ),
+              
+              const SizedBox(height: 24),
+              
+              // 最近文件列表
+              Expanded(
+                child: Container(
+                  margin: const EdgeInsets.only(top: 8),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              '最近打开',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).textTheme.titleLarge?.color,
+                              ),
+                            ),
+                            Consumer<AppState>(
+                              builder: (context, appState, _) {
+                                if (appState.recentFiles.isEmpty) {
+                                  return const SizedBox.shrink();
+                                }
+                                return TextButton(
+                                  onPressed: () => _showClearDialog(context),
+                                  child: const Text('清空'),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: Consumer<AppState>(
+                          builder: (context, appState, _) {
+                            if (appState.recentFiles.isEmpty) {
+                              return Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.history,
+                                      size: 64,
+                                      color: Colors.grey[400],
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      '暂无最近打开的文件',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }
+                            return ListView.builder(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              itemCount: appState.recentFiles.length,
+                              itemBuilder: (context, index) {
+                                final filePath = appState.recentFiles[index];
+                                final fileName = _getFileName(filePath);
+                                final fileExists = File(filePath).existsSync();
+                                
+                                return Card(
+                                  margin: const EdgeInsets.symmetric(vertical: 4),
+                                  child: ListTile(
+                                    leading: Icon(
+                                      Icons.picture_as_pdf,
+                                      color: fileExists 
+                                          ? const Color(0xFF1B5E20) 
+                                          : Colors.grey,
+                                      size: 40,
+                                    ),
+                                    title: Text(
+                                      fileName,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        color: fileExists ? null : Colors.grey,
+                                      ),
+                                    ),
+                                    subtitle: Text(
+                                      fileExists ? filePath : '文件不存在',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: fileExists ? Colors.grey[600] : Colors.red[300],
+                                      ),
+                                    ),
+                                    trailing: IconButton(
+                                      icon: const Icon(Icons.close, size: 20),
+                                      onPressed: () {
+                                        appState.removeFromRecent(filePath);
+                                      },
+                                    ),
+                                    onTap: fileExists
+                                        ? () => _navigateToPdfViewer(context, filePath)
+                                        : null,
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
+
+  void _showClearDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('清空记录'),
+        content: const Text('确定要清空所有最近打开的文件记录吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () {
+              context.read<AppState>().clearRecentFiles();
+              Navigator.pop(context);
+            },
+            child: const Text('确定', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-class _FeatureItem extends StatelessWidget {
+class _FeatureChip extends StatelessWidget {
   final IconData icon;
   final String text;
 
-  const _FeatureItem({required this.icon, required this.text});
+  const _FeatureChip({required this.icon, required this.text});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(20),
+      ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: Colors.white70, size: 24),
-          const SizedBox(width: 16),
+          Icon(icon, color: Colors.white, size: 16),
+          const SizedBox(width: 4),
           Text(
             text,
-            style: const TextStyle(
-              fontSize: 16,
-              color: Colors.white,
-            ),
+            style: const TextStyle(color: Colors.white, fontSize: 12),
           ),
         ],
       ),
