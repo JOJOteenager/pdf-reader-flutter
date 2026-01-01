@@ -1,0 +1,41 @@
+name: pdf_reader
+description: PDF阅读器 - 支持PDF阅读、手写笔注释、翻译和繁简转换
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # PDF 渲染
+  syncfusion_flutter_pdfviewer: ^25.1.37
+  
+  # 文件选择
+  file_picker: ^6.1.1
+  
+  # 本地存储
+  shared_preferences: ^2.2.2
+  path_provider: ^2.1.2
+  
+  # 状态管理
+  provider: ^6.1.1
+  
+  # 权限管理
+  permission_handler: ^11.3.0
+  
+  # 图标
+  cupertino_icons: ^1.0.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.1
+
+flutter:
+  uses-material-design: true
+  
+  assets:
+    - assets/
