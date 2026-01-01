@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:provider/provider.dart';
-import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import '../providers/app_state.dart';
 
 class PdfViewerScreen extends StatefulWidget {
@@ -14,28 +14,29 @@ class PdfViewerScreen extends StatefulWidget {
 }
 
 class _PdfViewerScreenState extends State<PdfViewerScreen> {
-  late PdfViewerController _pdfController;
-  final GlobalKey<SfPdfViewerState> _pdfViewerKey = GlobalKey();
-  
-  int _currentPage = 1;
+  PDFViewController? _pdfController;
+  int _currentPage = 0;
   int _totalPages = 0;
-  double _zoomLevel = 1.0;
+  bool _isReady = false;
   bool _isLoading = true;
   String? _errorMessage;
+  bool _nightMode = false;
   bool _showControls = true;
 
   @override
   void initState() {
     super.initState();
-    _pdfController = PdfViewerController();
-    
-    // 获取默认缩放级别
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final appState = context.read<AppState>();
+    _checkFile();
+  }
+
+  void _checkFile() {
+    final file = File(widget.filePath);
+    if (!file.existsSync()) {
       setState(() {
-        _zoomLevel = appState.defaultZoom;
+        _isLoading = false;
+        _errorMessage = '文件不存在';
       });
-    });
+    }
   }
 
   @override
@@ -44,12 +45,11 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
     if (_totalPages > 0) {
       context.read<AppState>().setLastPage(widget.filePath, _currentPage);
     }
-    _pdfController.dispose();
     super.dispose();
   }
 
   void _showPageJumpDialog() {
-    final controller = TextEditingController(text: _currentPage.toString());
+    final controller = TextEditingController(text: '${_currentPage + 1}');
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -87,7 +87,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
   void _jumpToPage(String value) {
     final page = int.tryParse(value);
     if (page != null && page >= 1 && page <= _totalPages) {
-      _pdfController.jumpToPage(page);
+      _pdfController?.setPage(page - 1);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('请输入有效页码 (1-$_totalPages)')),
@@ -95,25 +95,16 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
     }
   }
 
-  void _zoomIn() {
-    setState(() {
-      _zoomLevel = (_zoomLevel + 0.25).clamp(0.5, 4.0);
-      _pdfController.zoomLevel = _zoomLevel;
-    });
+  void _goToPreviousPage() {
+    if (_currentPage > 0) {
+      _pdfController?.setPage(_currentPage - 1);
+    }
   }
 
-  void _zoomOut() {
-    setState(() {
-      _zoomLevel = (_zoomLevel - 0.25).clamp(0.5, 4.0);
-      _pdfController.zoomLevel = _zoomLevel;
-    });
-  }
-
-  void _resetZoom() {
-    setState(() {
-      _zoomLevel = 1.0;
-      _pdfController.zoomLevel = _zoomLevel;
-    });
+  void _goToNextPage() {
+    if (_currentPage < _totalPages - 1) {
+      _pdfController?.setPage(_currentPage + 1);
+    }
   }
 
   @override
@@ -121,6 +112,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
     final fileName = widget.filePath.split(Platform.pathSeparator).last;
     
     return Scaffold(
+      backgroundColor: _nightMode ? Colors.black : Colors.grey[200],
       appBar: _showControls ? AppBar(
         title: Text(
           fileName,
@@ -128,34 +120,14 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
           overflow: TextOverflow.ellipsis,
         ),
         actions: [
-          // 缩放控制
+          // 夜间模式
           IconButton(
-            icon: const Icon(Icons.zoom_out),
-            tooltip: '缩小',
-            onPressed: _zoomLevel > 0.5 ? _zoomOut : null,
-          ),
-          GestureDetector(
-            onTap: _resetZoom,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              alignment: Alignment.center,
-              child: Text(
-                '${(_zoomLevel * 100).toInt()}%',
-                style: const TextStyle(fontSize: 14),
-              ),
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.zoom_in),
-            tooltip: '放大',
-            onPressed: _zoomLevel < 4.0 ? _zoomIn : null,
-          ),
-          // 书签
-          IconButton(
-            icon: const Icon(Icons.bookmark_border),
-            tooltip: '书签',
+            icon: Icon(_nightMode ? Icons.light_mode : Icons.dark_mode),
+            tooltip: _nightMode ? '日间模式' : '夜间模式',
             onPressed: () {
-              _pdfViewerKey.currentState?.openBookmarkView();
+              setState(() {
+                _nightMode = !_nightMode;
+              });
             },
           ),
           // 更多选项
@@ -163,9 +135,6 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
             icon: const Icon(Icons.more_vert),
             onSelected: (value) {
               switch (value) {
-                case 'search':
-                  // 搜索功能由 PDF Viewer 内置支持
-                  break;
                 case 'goto':
                   _showPageJumpDialog();
                   break;
@@ -200,113 +169,138 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
       body: Stack(
         children: [
           // PDF 查看器
-          GestureDetector(
-            onTap: () {
-              if (!_showControls) {
-                setState(() {
-                  _showControls = true;
-                });
-              }
-            },
-            child: _errorMessage != null
-                ? _buildErrorWidget()
-                : SfPdfViewer.file(
-                    File(widget.filePath),
-                    key: _pdfViewerKey,
-                    controller: _pdfController,
-                    canShowScrollHead: true,
-                    canShowScrollStatus: true,
-                    canShowPaginationDialog: true,
-                    enableDoubleTapZooming: true,
-                    enableTextSelection: true,
-                    interactionMode: PdfInteractionMode.selection,
-                    onDocumentLoaded: (details) {
-                      setState(() {
-                        _totalPages = details.document.pages.count;
-                        _isLoading = false;
-                      });
-                      
-                      // 恢复上次阅读位置
-                      final lastPage = context.read<AppState>().getLastPage(widget.filePath);
-                      if (lastPage != null && lastPage > 1 && lastPage <= _totalPages) {
-                        Future.delayed(const Duration(milliseconds: 100), () {
-                          _pdfController.jumpToPage(lastPage);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('已恢复到第 $lastPage 页'),
-                              duration: const Duration(seconds: 2),
-                            ),
-                          );
-                        });
+          if (_errorMessage != null)
+            _buildErrorWidget()
+          else
+            GestureDetector(
+              onTap: () {
+                if (!_showControls) {
+                  setState(() {
+                    _showControls = true;
+                  });
+                }
+              },
+              child: PDFView(
+                filePath: widget.filePath,
+                enableSwipe: true,
+                swipeHorizontal: false,
+                autoSpacing: true,
+                pageFling: true,
+                pageSnap: true,
+                fitPolicy: FitPolicy.BOTH,
+                nightMode: _nightMode,
+                onRender: (pages) {
+                  setState(() {
+                    _totalPages = pages ?? 0;
+                    _isReady = true;
+                    _isLoading = false;
+                  });
+                  
+                  // 恢复上次阅读位置
+                  final lastPage = context.read<AppState>().getLastPage(widget.filePath);
+                  if (lastPage != null && lastPage > 0 && lastPage < _totalPages) {
+                    Future.delayed(const Duration(milliseconds: 200), () {
+                      _pdfController?.setPage(lastPage);
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('已恢复到第 ${lastPage + 1} 页'),
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
                       }
-                    },
-                    onDocumentLoadFailed: (details) {
-                      setState(() {
-                        _isLoading = false;
-                        _errorMessage = details.description;
-                      });
-                    },
-                    onPageChanged: (details) {
-                      setState(() {
-                        _currentPage = details.newPageNumber;
-                      });
-                    },
-                    onZoomLevelChanged: (details) {
-                      setState(() {
-                        _zoomLevel = details.newZoomLevel;
-                      });
-                    },
-                  ),
-          ),
-          
-          // 加载指示器
-          if (_isLoading)
-            const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(color: Color(0xFF1B5E20)),
-                  SizedBox(height: 16),
-                  Text('正在加载文档...'),
-                ],
+                    });
+                  }
+                },
+                onError: (error) {
+                  setState(() {
+                    _isLoading = false;
+                    _errorMessage = error.toString();
+                  });
+                },
+                onPageError: (page, error) {
+                  debugPrint('页面 $page 加载错误: $error');
+                },
+                onViewCreated: (controller) {
+                  _pdfController = controller;
+                },
+                onPageChanged: (page, total) {
+                  setState(() {
+                    _currentPage = page ?? 0;
+                    _totalPages = total ?? 0;
+                  });
+                },
               ),
             ),
           
-          // 页码显示
-          if (!_isLoading && _errorMessage == null && _showControls)
+          // 加载指示器
+          if (_isLoading)
+            Container(
+              color: Colors.white,
+              child: const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(color: Color(0xFF1B5E20)),
+                    SizedBox(height: 16),
+                    Text('正在加载文档...'),
+                  ],
+                ),
+              ),
+            ),
+          
+          // 页码显示和导航
+          if (_isReady && _showControls)
             Positioned(
               bottom: 16,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: GestureDetector(
-                  onTap: _showPageJumpDialog,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.7),
-                      borderRadius: BorderRadius.circular(25),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
+              left: 16,
+              right: 16,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // 上一页
+                  FloatingActionButton.small(
+                    heroTag: 'prev',
+                    onPressed: _currentPage > 0 ? _goToPreviousPage : null,
+                    backgroundColor: _currentPage > 0 
+                        ? const Color(0xFF1B5E20) 
+                        : Colors.grey,
+                    child: const Icon(Icons.chevron_left, color: Colors.white),
+                  ),
+                  const SizedBox(width: 16),
+                  // 页码
+                  GestureDetector(
+                    onTap: _showPageJumpDialog,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.7),
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                      child: Text(
+                        '${_currentPage + 1} / $_totalPages',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
                         ),
-                      ],
-                    ),
-                    child: Text(
-                      '$_currentPage / $_totalPages',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),
-                ),
+                  const SizedBox(width: 16),
+                  // 下一页
+                  FloatingActionButton.small(
+                    heroTag: 'next',
+                    onPressed: _currentPage < _totalPages - 1 ? _goToNextPage : null,
+                    backgroundColor: _currentPage < _totalPages - 1 
+                        ? const Color(0xFF1B5E20) 
+                        : Colors.grey,
+                    child: const Icon(Icons.chevron_right, color: Colors.white),
+                  ),
+                ],
               ),
             ),
           
@@ -316,6 +310,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
               top: MediaQuery.of(context).padding.top + 8,
               right: 8,
               child: FloatingActionButton.small(
+                heroTag: 'exit_fullscreen',
                 onPressed: () {
                   setState(() {
                     _showControls = true;

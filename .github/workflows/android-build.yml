@@ -37,32 +37,12 @@ jobs:
     - name: Get dependencies
       run: flutter pub get
     
-    - name: Analyze code
-      run: flutter analyze --no-fatal-infos || true
-    
-    - name: Build APK (Release)
-      run: flutter build apk --release --no-tree-shake-icons
-    
-    - name: Build APK (Debug)
-      run: flutter build apk --debug
-    
-    - name: List APK files
-      run: |
-        echo "=== Release APK ==="
-        ls -la build/app/outputs/flutter-apk/app-release.apk
-        echo "=== Debug APK ==="
-        ls -la build/app/outputs/flutter-apk/app-debug.apk
+    - name: Build Release APK
+      run: flutter build apk --release
     
     - name: Upload Release APK
       uses: actions/upload-artifact@v4
       with:
         name: pdf-reader-release
         path: build/app/outputs/flutter-apk/app-release.apk
-        retention-days: 30
-    
-    - name: Upload Debug APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: pdf-reader-debug
-        path: build/app/outputs/flutter-apk/app-debug.apk
         retention-days: 30

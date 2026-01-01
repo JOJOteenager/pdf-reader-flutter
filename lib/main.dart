@@ -21,16 +21,20 @@ void main() {
     DeviceOrientation.landscapeRight,
   ]);
   
+  // 错误处理
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    debugPrint('Flutter Error: ${details.exception}');
+  };
+  
   runApp(const PDFReaderApp());
 }
 
 class PDFReaderApp extends StatelessWidget {
   const PDFReaderApp({super.key});
 
-  // 主题色 - 深绿色
   static const Color primaryColor = Color(0xFF1B5E20);
   static const Color primaryColorLight = Color(0xFF2E7D32);
-  static const Color primaryColorDark = Color(0xFF0D3D14);
 
   @override
   Widget build(BuildContext context) {
@@ -77,11 +81,10 @@ class PDFReaderApp extends StatelessWidget {
                 seedColor: primaryColor,
                 brightness: Brightness.dark,
                 primary: primaryColorLight,
-                secondary: primaryColor,
               ),
               useMaterial3: true,
-              appBarTheme: AppBarTheme(
-                backgroundColor: primaryColorDark,
+              appBarTheme: const AppBarTheme(
+                backgroundColor: Color(0xFF0D3D14),
                 foregroundColor: Colors.white,
                 elevation: 0,
                 centerTitle: true,

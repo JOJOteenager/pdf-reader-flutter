@@ -1,5 +1,5 @@
 name: pdf_reader
-description: PDF阅读器 - 专为华为平板优化，支持PDF阅读、手写笔注释、翻译和繁简转换
+description: PDF阅读器 - 专为华为平板优化
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -10,8 +10,8 @@ dependencies:
   flutter:
     sdk: flutter
   
-  # PDF 渲染 - 使用兼容版本
-  syncfusion_flutter_pdfviewer: ^24.2.9
+  # PDF 渲染
+  flutter_pdfview: ^1.3.2
   
   # 文件选择
   file_picker: ^6.1.1
@@ -25,6 +25,9 @@ dependencies:
   
   # 权限管理
   permission_handler: ^11.3.0
+  
+  # 网络请求（翻译API）
+  http: ^1.2.0
   
   # 图标
   cupertino_icons: ^1.0.6
